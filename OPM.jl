@@ -1,27 +1,14 @@
 # OPM - Load / Create a dataset from flat text files or r datasource
-#    By  Matthew Churilla (matthew.churilla@outlook.com)
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
-#
-#    You should have received a copy of the GNU General Public License
-#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 
 # Set this to true to force a refresh from source datafiles
 refresh = false
 # Set this to true to install packages from the internet
 install = false
 # Hardcode a location to the sctfile here.
-sctfile = "c://Users/matth/Desktop/data/1973-09-to-2014-06/SCTFILE.TXT"
+sctfile = raw"C:\Users\ME\Desktop\data\1973-09-to-2014-06\SCTFILE.TXT"
 # This is the location of the root of the files
-fileroot = "c://Users/matth/Desktop/data/1973-09-to-2014-06/"
+fileroot = raw"C:\Users\ME\Desktop\data\1973-09-to-2014-06"
 
 # Location of files of interest within our root
 subdir = "non-dod/status"
@@ -37,10 +24,15 @@ fields_of_interest = vcat(:PSEUDO_ID, :FILE_DATE, :AGENCY, :OCCUPATION, :LOS_LEV
 ### Executed code from here on ###
 # Get our filelist and parse sctdata
 files = [files for (root, dirs, files) in walkdir(path)]
+files = [joinpath(path, file) for file in files[1]]
 # This loads all files and includes depencenies
+include(raw"C:\Users\ME\OneDrive\Documents\julia\FWF\src\FWF.jl")
 include("OPMInstallDeps.jl")
 sctdata = opm_parse_sctfile_fwf(sctfile)
 
+# For now, load ad-hoc here - julia
+files = files[endswith.(files, "_12.txt")]
+data = opm_load_filelist(files, sctdata, columns = fields_of_interest, silent=false)
 # If refresh...delete our files.
 #if (refresh) {
 #    file.remove(c(result_filename, filtered_filename, model_filename))
