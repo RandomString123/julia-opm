@@ -136,7 +136,7 @@ function opm_add_calculations!(x)
     #tmp = groupby(x, [:PSEUDO_ID, :group_id])
     ##mutate(`2016 adjusted pay` = as.integer(opm_inflation_adjust(`year`, "2016", `ADJUSTED BASIC PAY`))) %>%
     x[:adjusted_pay_2016] = opm_inflation_adjust(x[:year], 2016, x[:ADJUSTED_BASIC_PAY])
-    x[:rowid] = 1:size(x,1)
+    x[:rowid] = [x for x in 1:size(x,1)]
     tmp = by(x, [:PSEUDO_ID, :group_id]) do df
         #mutate(`pay change` = opm_percent_change(`ADJUSTED BASIC PAY`),    
         DataFrame(pay_change = opm_percent_change(df[:ADJUSTED_BASIC_PAY]),
@@ -146,13 +146,14 @@ function opm_add_calculations!(x)
                   sdfrowid=df[:rowid] # For back merging
         )
     end
-    #join!(x, tmp, on = (:rowid, :sdfrowid), kind = :left)
+ 
     # Ensure both are sorted to match order then merge.
     sort!(x, cols=[order(:rowid)])
     sort!(tmp, cols=[order(:sdfrowid)])
     x[:pay_change] = tmp[:pay_change]
     x[:inflation] = tmp[:inflation]
     x[:idx] = tmp[:idx]
+    opm_sort!(x) # Re-sort just to be sure
     #    `inflation` = opm_percent_change_inflation(`year`), idx = 1 + year - min(year, na.rm = TRUE),
     #    `2016 adjusted pay` = as.integer(opm_inflation_adjust(`year`, "2016", `ADJUSTED BASIC PAY`))) # %>%
     #    #mutate(`inflation` = opm_percent_change_inflation(`year`))
@@ -230,9 +231,9 @@ opm_generate_dataset_from_fwfs <- function(files, sctdata, columns = NULL) {
 # Turns out if we don't filter columns we run out of memory with just one set.
 # So use parameter columns to specify a vector of columns to keep.
 # Also have ids as a list of ids to filter by, so we can grep across a lot of files for an ID
-function opm_load_filelist(pathList, sctdata; columns::Vector{Symbol} = nothing,  ids::Vector{Int} = nothing) 
-    #lapply(pathList, opm_load_and_organize, sctdata = sctdata, columns = columns, ids = ids) %>% bind_rows()
-    [opm_load_and_organize(x, sctdata=sctdata, columns=columns, ids = ids) for x in pathList]
+function opm_load_filelist(pathList::Vector{String}, sctdata::DataFrame; columns::Vector{Symbol} = nothing,  ids=nothing, silent=false) 
+    #lapply(pathList, opm_load_and_organize, sctdata = sctdata, columns = columns, ids = ids) %>% bind_rows()   
+    vcat([opm_load_and_organize(x, sctdata, columns=columns, ids = ids, silent=silent) for x in pathList]...)
 end
 
 # Needs path to file
@@ -240,7 +241,7 @@ end
 # Optional list of columns to filter by
 # Optional vector of PSEUDO-IDs to filter by
 # silent doesn't print anything to console.
-function opm_load_and_organize(path, sctdata;  columns::Vector{Symbol} = nothing,  ids::Vector{Int} = nothing, silent = false) 
+function opm_load_and_organize(path, sctdata;  columns=nothing,  ids=nothing, silent = false) 
     #result <- opm_parse_fwf(path) %>% opm_organize_tibble(sctdata)
     result = opm_parse_fwf(path)
     result = opm_organize_tibble(result, sctdata)
@@ -260,7 +261,7 @@ function opm_load_and_organize(path, sctdata;  columns::Vector{Symbol} = nothing
     #    print(paste("Loaded:", path))
     #}
     if(!silent) 
-        println("Loaded: $path")
+        println(STDOUT, "Loaded: $path")
     end
     #return(result)
     return result
